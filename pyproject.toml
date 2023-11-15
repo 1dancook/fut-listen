@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "fut-listen"
+version = "0.1.0"
+description = "CLI Program to automate listening sections for tests."
+authors = ["Dan Cook <cook.r.dan@gmail.com>"]
+readme = "README.md"
+packages = [{include = "fut_listen", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+click = "^8.1.7"
+
+[tool.poetry.scripts]
+fut-listen = "fut_listen.cli:cli"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
