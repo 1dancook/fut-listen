@@ -81,16 +81,16 @@ def play_tone(length=0.6, hz=1000, vol=-30, pause=True):
         sleep(1) # needs a short pause afterward
 
 
-def play_file(number, audio_file, delay, added_read_delay, repeat, confirm_before, no_tone, no_read, rate):
+def play_file(number, audio_file, delay, reading_delay, repeat, confirm_before, no_tone, no_read, rate):
     """ Go through a process of playing a file for NUMBER times. """
 
     say(f"Listening number {number}", rate)
     number_times_str = "times" if repeat > 1 else "time"
     say(f"The audio will play {repeat} {number_times_str}", rate)
 
-    if not no_read:
+    if not no_read and reading_delay > 0:
         say(f"Before we start listening, you can read the questions.", rate)
-        confirm_or_delay(confirm_before, delay + added_read_delay)
+        confirm_or_delay(confirm_before, reading_delay)
 
     for x in range(repeat):
         if not no_tone:
@@ -105,7 +105,7 @@ def play_file(number, audio_file, delay, added_read_delay, repeat, confirm_befor
 @click.option("-d", "--delay", default=10, help="Specify delay between plays", required=False)
 @click.option("-r", "--rate", default=145, help="Specify the rate for TTS", required=False)
 @click.option("--repeat", default=2, help="Specify the number of times to repeat each audio file.", required=False)
-@click.option("--added-read-delay", default=5, help="Specify added delay for reading questions (added to --delay)", required=False)
+@click.option("--reading-delay", default=15, help="Specify time given to read questions.", required=False)
 @click.option("-c", "--confirm-before", is_flag=True, default=False, help="Confirm before playing an audio file.", required=False)
 @click.option("-e", "--exclude", multiple=True, type=click.Path(), help="Exclude file (can provide multiple)", required=False)
 @click.option("--no-start", is_flag=True, default=False, help="Don't play the start instruction.", required=False)
@@ -113,7 +113,7 @@ def play_file(number, audio_file, delay, added_read_delay, repeat, confirm_befor
 @click.option("--no-tone", is_flag=True, default=False, help="Don't play the tone before an audio file.", required=False)
 @click.option("--no-read", is_flag=True, default=False, help="Don't give read time.", required=False)
 @click.option("--ext", default="mp3", help="The audio file extension to use.", required=False)
-def cli(path, delay, rate, repeat, added_read_delay, confirm_before, exclude, no_start, no_end, no_tone, no_read, ext):
+def cli(path, delay, rate, repeat, reading_delay, confirm_before, exclude, no_start, no_end, no_tone, no_read, ext):
     """
     fut-listen
 
@@ -184,7 +184,7 @@ def cli(path, delay, rate, repeat, added_read_delay, confirm_before, exclude, no
     for number, audio_file in enumerate(audio_files, start=1):
         click.secho("="*60, dim=True)
         notify(f"Starting #{number}: {audio_file.name}")
-        play_file(number, audio_file, delay, added_read_delay, repeat, confirm_before, no_tone, no_read, rate)
+        play_file(number, audio_file, delay, reading_delay, repeat, confirm_before, no_tone, no_read, rate)
 
     # End section
     if not no_end:
