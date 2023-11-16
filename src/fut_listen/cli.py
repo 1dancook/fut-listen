@@ -174,7 +174,7 @@ def cli(path, delay, rate, repeat, reading_delay, confirm_before, exclude, no_st
 
     click.secho("-"*50, dim=True)
     prompt_string = click.style("Are you ready to start?", bold=True)
-    if not click.confirm(prompt_string, prompt_suffix=""):
+    if not click.confirm(prompt_string, default=True, show_default=False, prompt_suffix=""):
         quit()
 
     # Start section
