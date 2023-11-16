@@ -58,7 +58,7 @@ def wait(seconds: int) -> None:
     for x in range(seconds):
         print(".", end="", flush=True)
         if x + 1 > seconds - 3:    # Play three tones at the end
-            play_tone(length=0.3, hz=900, vol=-35, pause=False)
+            play_tone(length=0.3, hz=900, vol=-25, pause=False)
             sleep(0.7)
         else:
             sleep(1)
@@ -73,7 +73,7 @@ def confirm_or_delay(confirm_before, delay):
     else:
         wait(delay)
 
-def play_tone(length=0.6, hz=1000, vol=-30, pause=True):
+def play_tone(length=0.6, hz=1000, vol=-22, pause=True):
     """ Play a tone with sox and sleep for one second """
     args = ["play", "--no-show-progress", "-n", "synth", str(length), "sin", str(hz), "vol", f"{vol}dB"]
     run_subprocess(args)
