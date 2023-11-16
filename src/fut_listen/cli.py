@@ -149,6 +149,8 @@ def cli(path, delay, rate, repeat, reading_delay, confirm_before, exclude, no_st
     macos_set_tts_language("en")
 
     # Set the path to current directory if not supplied
+    if path:
+        path = Path(path).expanduser().absolute()
     if not path:
         path = Path(".").absolute()
 
