@@ -13,6 +13,13 @@ SPLASH = """\
   /`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`
 """
 
+ASSETS_PATH = Path(__file__).parent / 'assets'
+
+def play_audio(path: Path, really_quiet=True) -> None:
+    args = ["mpv", str(path)]
+    if really_quiet:
+        args.append("--really-quiet")
+    run_subprocess(args)
 
 def notify(text, notify_type="info"):
     """ Print out a formatted notification string given certain text """
@@ -29,37 +36,13 @@ def run_subprocess(args, capture_output=True, text=True):
     except:
         pass
 
-def macos_set_tts_language(language):
-    """
-    Set the TTS language for MacOS
-
-    Example:
-        macos_set_tts_language("en") # English
-        macos_set_tts_language("ja") # Japanese
-
-    You should have the speech downloaded.
-
-    """
-
-    args = ["defaults", "write", "com.apple.speech.voice.prefs", "SystemTTSLanguage", language]
-    run_subprocess(args)
-
-def say(phrase, rate, interactive=True):
-    """ Use macos `say` utility for text to speech. """
-    args = ["say", "--rate", str(rate), str(phrase)]
-    if interactive:
-        args.append("-i")
-    run_subprocess(args)
-
-
 def wait(seconds: int) -> None:
     notify(f"Waiting for {seconds} second(s).")
     print("    ", end="", flush=True)
     for x in range(seconds):
         print(".", end="", flush=True)
         if x + 1 > seconds - 3:    # Play three tones at the end
-            play_tone(length=0.3, hz=900, vol=-25, pause=False)
-            sleep(0.7)
+            play_audio(ASSETS_PATH / "A5.mp3")
         else:
             sleep(1)
     print(" continuing")
@@ -73,38 +56,28 @@ def confirm_or_delay(confirm_before, delay):
     else:
         wait(delay)
 
-def play_tone(length=0.6, hz=1000, vol=-22, pause=True):
-    """ Play a tone with sox and sleep for one second """
-    args = ["play", "--no-show-progress", "-n", "synth", str(length), "sin", str(hz), "vol", f"{vol}dB"]
-    run_subprocess(args)
-    if pause:
-        sleep(1) # needs a short pause afterward
-
-
-def play_file(number, audio_file, delay, reading_delay, repeat, confirm_before, no_tone, no_read, rate):
+def play_file(number, audio_file, delay, reading_delay, repeat, confirm_before, no_tone, no_read):
     """ Go through a process of playing a file for NUMBER times. """
 
-    say(f"Listening number {number}", rate)
-    number_times_str = "times" if repeat > 1 else "time"
-    say(f"The audio will play {repeat} {number_times_str}", rate)
+    play_audio(ASSETS_PATH / f"listening_number_{number}.m4a")
+    play_audio(ASSETS_PATH / f"audio_play_{number}.m4a")
 
     if not no_read and reading_delay > 0:
-        say(f"Before we start listening, you can read the questions.", rate)
+        play_audio(ASSETS_PATH / "before_we_start_listening_you_can_read_the_questions.m4a")
         confirm_or_delay(confirm_before, reading_delay)
 
     for x in range(repeat):
         if not no_tone:
-            play_tone()
+            play_audio(ASSETS_PATH / "E6.mp3")
         notify(f"Playing {audio_file.name}")
-        run_subprocess(["mpv", audio_file])
+        play_audio(audio_file, really_quiet=False)
         confirm_or_delay(confirm_before, delay)
 
 
 @click.command()
 @click.option("-p", "--path", type=click.Path(exists=True), help="Specify a path", required=False)
 @click.option("-d", "--delay", default=10, help="Specify delay between plays", required=False)
-@click.option("-r", "--rate", default=145, help="Specify the rate for TTS", required=False)
-@click.option("--repeat", default=2, help="Specify the number of times to repeat each audio file.", required=False)
+@click.option("-r", "--repeat", default=2, help="Specify the number of times to repeat each audio file.", required=False)
 @click.option("--reading-delay", default=15, help="Specify time given to read questions.", required=False)
 @click.option("-c", "--confirm-before", is_flag=True, default=False, help="Confirm before playing an audio file.", required=False)
 @click.option("-e", "--exclude", multiple=True, type=click.Path(), help="Exclude file (can provide multiple)", required=False)
@@ -113,7 +86,7 @@ def play_file(number, audio_file, delay, reading_delay, repeat, confirm_before, 
 @click.option("--no-tone", is_flag=True, default=False, help="Don't play the tone before an audio file.", required=False)
 @click.option("--no-read", is_flag=True, default=False, help="Don't give read time.", required=False)
 @click.option("--ext", default="mp3", help="The audio file extension to use.", required=False)
-def cli(path, delay, rate, repeat, reading_delay, confirm_before, exclude, no_start, no_end, no_tone, no_read, ext):
+def cli(path, delay, repeat, reading_delay, confirm_before, exclude, no_start, no_end, no_tone, no_read, ext):
     """
     fut-listen
 
@@ -137,16 +110,9 @@ def cli(path, delay, rate, repeat, reading_delay, confirm_before, exclude, no_st
         click.secho("mpv was not found. Install mpv.", fg="red")
         quit()
 
-    if subprocess.run(["which", "sox"], capture_output=True).returncode == 1:
-        click.secho("sox was not found. Install sox.", fg="red")
-        quit()
-
     # Check that the delay is at least something!
     if delay < 5:
         raise ValueError("You should use a delay longer than 5 seconds.")
-
-    # First set the TTS language to English
-    macos_set_tts_language("en")
 
     # Set the path to current directory if not supplied
     if path:
@@ -179,18 +145,18 @@ def cli(path, delay, rate, repeat, reading_delay, confirm_before, exclude, no_st
 
     # Start section
     if not no_start:
-        say("Now starting the listening section of the test.", rate)
+        play_audio(ASSETS_PATH / "now_starting_the_listening_section_of_the_test.m4a")
         sleep(1)
 
     # Play audio files
     for number, audio_file in enumerate(audio_files, start=1):
         click.secho("="*60, dim=True)
         notify(f"Starting #{number}: {audio_file.name}")
-        play_file(number, audio_file, delay, reading_delay, repeat, confirm_before, no_tone, no_read, rate)
+        play_file(number, audio_file, delay, reading_delay, repeat, confirm_before, no_tone, no_read)
 
     # End section
     if not no_end:
-        say("The listening section is finished.", rate)
+        play_audio(ASSETS_PATH / "the_listening_section_is_finished.m4a")
 
 
 if __name__ == "__main__":
