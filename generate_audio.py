@@ -14,6 +14,11 @@ from pathlib import Path
 ASSET_FOLDER = Path("./src/fut_listen/assets")
 ASSET_FOLDER.mkdir(parents=True, exist_ok=True)
 
+# Erase everything in the asset folder before starting
+for file in ASSET_FOLDER.glob("*.*"):
+    print(f"Deleting {file.name}")
+    file.unlink()
+
 def sanitize_phrase(phrase: str) -> str:
     phrase = phrase.lower()
     for c in "!@#$%^&*(){}[];:'\",<.>/?\\":
@@ -21,12 +26,21 @@ def sanitize_phrase(phrase: str) -> str:
     phrase = phrase.replace(" ", "_")
     return phrase
 
-def save_tone(length=0.6, hz=1000, vol=-22):
+def save_tone(length, hz, vol, out_file):
     """ Play a tone with sox and sleep for one second """
-    out_file = ASSET_FOLDER / Path(f"tone_{length}s@{hz}.mp3")
+    out_file = ASSET_FOLDER / Path(f"{out_file}.mp3")
     print("making", out_file)
+
+    # first make the tone file
     args = ["sox", "-n", "-r", "44100", "-c", "1", str(out_file), "synth", str(length), "sine", str(hz), "vol", f"{vol}db",]
     subprocess.run(args)
+
+    # determine if we need some padding
+    remaining = 1.0 - length
+    if remaining > 0: # pad it with silence
+        args = ["sox", str(out_file), str(out_file), "pad", "0", str(remaining)]
+        subprocess.run(args)
+
 
 def say(phrase, filename=None):
     if not filename:
@@ -54,5 +68,5 @@ if __name__ == "__main__":
 
     say("Before we start listening, you can read the questions.")
 
-    save_tone()
-    save_tone(length=0.3, hz=900, vol=-25)
+    save_tone(length=0.6, hz=1318.510, vol=-21, out_file="E6") #E6 tone
+    save_tone(length=0.25, hz=880, vol=-22, out_file="A5") #A5 tone
