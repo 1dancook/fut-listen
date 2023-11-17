@@ -18,11 +18,11 @@ The defaults probably work fine, but there are a lot of options.
 
 This program doesn't do any trimming of audio. If you need to do that, use another tool. 
 
+**Note:** Currently this is only tested to work on MacOS.
+
 ### Requirements:
 
-1. You should have a high-quality TTS voice downloaded. [Read here](https://support.apple.com/guide/mac-help/change-the-voice-your-mac-uses-to-speak-text-mchlp2290/mac) to find out more.
-2. [mpv](https://mpv.io) is used for playing audio. Install it using homebrew: `brew install mpv`.
-3. [sox](https://sourceforge.net/projects/sox/) is used to play tones. Install it using homebrew: `brew install sox`.
+- [mpv](https://mpv.io) is used for playing audio. Install it using homebrew: `brew install mpv`.
 
 ### Installation
 
@@ -47,3 +47,8 @@ fut-listen
 # See options
 fut-listen --help
 ```
+
+### Generating Audio requirements
+
+1. High quality TTS voice to use for `say` on MacOS
+2. sox (for generating tones)
