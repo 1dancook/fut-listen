@@ -1,11 +1,9 @@
 # FUT-LISTEN
 
 ```
-  /`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`
-  /`     ┏━╸╻ ╻╺┳╸   ╻  ╻┏━┓╺┳╸┏━╸┏┓╻     /`
-  /`     ┣╸ ┃ ┃ ┃ ╺━╸┃  ┃┗━┓ ┃ ┣╸ ┃┗┫     /`
-  /`     ╹  ┗━┛ ╹    ┗━╸╹┗━┛ ╹ ┗━╸╹ ╹     /`
-  /`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`
+          -// ┏━╸╻ ╻╺┳╸   ╻  ╻┏━┓╺┳╸┏━╸┏┓╻ \\-               
+       -+=||  ┣╸ ┃ ┃ ┃ ╺━╸┃  ┃┗━┓ ┃ ┣╸ ┃┗┫  ||=+-            
+          -\\ ╹  ┗━┛ ╹    ┗━╸╹┗━┛ ╹ ┗━╸╹ ╹ //-               
 ```
 
 A CLI Program to automate listening sections for tests.
@@ -48,7 +46,7 @@ fut-listen
 fut-listen --help
 ```
 
-### Generating Audio requirements
+### Generating Audio requirements (development)
 
 1. High quality TTS voice to use for `say` on MacOS
 2. sox (for generating tones)
