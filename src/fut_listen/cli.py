@@ -146,7 +146,7 @@ class AudioPlayer():
         if not self.audio_only:
             self.notify(f"Listening Number {number}", notify_str="Announcement", fg="blue")
             self.play(ASSETS_PATH / f"listening_number_{number}.m4a")
-            self.play(ASSETS_PATH / f"audio_play_{number}.m4a")
+            self.play(ASSETS_PATH / f"audio_play_{self.repeat + 1}.m4a") # repeat
 
         if not self.no_read and self.reading_delay > 0 and not self.audio_only:
             self.notify(f"Pause for reading time", notify_str="Announcement", fg="blue")
@@ -161,7 +161,7 @@ class AudioPlayer():
         if self.audio_only:
             delay_str = click.style("[No Post-delay]", fg=246)
 
-        self.notify(f"{audio_file.name}  {repeat_str}  {delay_str}", notify_str="PLAY", fg="green")
+        self.notify(f"{audio_file.name}  {repeat_str}  {delay_str}", notify_str=f"Audio {number}", fg="green")
         for x in range(self.repeat + 1): # adding one to properly do the repeat
             if self.confirm_before:
                 prompt_string = click.style("> Press [ENTER] to continue...", bold=True)
@@ -208,8 +208,9 @@ def get_path(ctx, param, value):
 @click.option("--no-end", is_flag=True, default=False, help="Disables the ending instruction.", required=False)
 @click.option("--no-tone", is_flag=True, default=False, help="Disables the tones.", required=False)
 @click.option("--no-read", is_flag=True, default=False, help="Disables the read time.", required=False)
+@click.option("--no-splash", is_flag=True, default=False, help="Disables the splash and starting confirmation. Will start playing audio immediately.", required=False)
 @click.option("--ext", default="mp3", help="The audio file extension to use", required=False)
-def cli(path, delay, repeat, audio_only, reading_delay, confirm_before, exclude, no_start, no_end, no_tone, no_read, ext):
+def cli(path, delay, repeat, audio_only, reading_delay, confirm_before, exclude, no_start, no_end, no_tone, no_read, no_splash, ext):
     """
     fut-listen
 
@@ -255,7 +256,8 @@ def cli(path, delay, repeat, audio_only, reading_delay, confirm_before, exclude,
         quit()
 
     # Do the splash start and confirm before continuing
-    do_splash_start(audio_files)
+    if not no_splash:
+        do_splash_start(audio_files)
 
     # Initialize and start the audio player
     audio_player = AudioPlayer(
