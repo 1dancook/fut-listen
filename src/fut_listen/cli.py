@@ -4,105 +4,231 @@ from pathlib import Path
 from time import sleep
 import click
 
-SPLASH = """\
-
-  /`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`
-  /`     ┏━╸╻ ╻╺┳╸   ╻  ╻┏━┓╺┳╸┏━╸┏┓╻     /`
-  /`     ┣╸ ┃ ┃ ┃ ╺━╸┃  ┃┗━┓ ┃ ┣╸ ┃┗┫     /`
-  /`     ╹  ┗━┛ ╹    ┗━╸╹┗━┛ ╹ ┗━╸╹ ╹     /`
-  /`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`/`
-"""
+s1 = r"   -// ┏━╸╻ ╻╺┳╸   ╻  ╻┏━┓╺┳╸┏━╸┏┓╻ \\-   ".center(80)
+s2 = r"-+=||  ┣╸ ┃ ┃ ┃ ╺━╸┃  ┃┗━┓ ┃ ┣╸ ┃┗┫  ||=+-".center(80)
+s3 = r"   -\\ ╹  ┗━┛ ╹    ┗━╸╹┗━┛ ╹ ┗━╸╹ ╹ //-   ".center(80)
+SPLASH = f"{s1}\n{s2}\n{s3}"
+SPLASH = SPLASH.replace("/", click.style("/", fg=246))
+SPLASH = SPLASH.replace("\\", click.style("\\", fg=246))
+SPLASH = SPLASH.replace("|", click.style("|", fg=250))
+SPLASH = SPLASH.replace("=", click.style("=", fg=244))
+SPLASH = SPLASH.replace("+", click.style("+", fg=241))
+SPLASH = SPLASH.replace("-", click.style("-", fg=239))
 
 ASSETS_PATH = Path(__file__).parent / 'assets'
 
-def play_audio(path: Path, really_quiet=True) -> None:
-    args = ["mpv", str(path)]
-    if really_quiet:
-        args.append("--really-quiet")
-    run_subprocess(args)
+def horizontal_bar(width=80, fg=242, ch="─"):
+    click.secho(ch*width, fg=fg)
 
-def notify(text, notify_type="info"):
-    """ Print out a formatted notification string given certain text """
-    notify_str = ""
-    if notify_type.lower().strip() == "info":
-        notify_str = click.style("[INFO]", bg="green", fg="black")
-    prefix = click.style(">>> ", dim=True)
-    click.secho(f"{prefix}{notify_str} {text}")
+def get_audio_duration(file_path):
+    # Use ffprobe to get the duration of an audio file
+    # returns as milliseconds
+    result = subprocess.run(
+            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', file_path], 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True
+            )
+    duration = round(float(result.stdout) * 1000)
+    return duration
 
-def run_subprocess(args, capture_output=True, text=True):
-    # TODO: expand the exceptions bit
-    try:
-        subprocess.run(args)
-    except:
-        pass
+class AudioPlayer():
+    """ Holds the state and manages the logic of playing audio files """
 
-def wait(seconds: int) -> None:
-    notify(f"Waiting for {seconds} second(s).")
-    print("    ", end="", flush=True)
-    for x in range(seconds):
-        print(".", end="", flush=True)
-        if x + 1 > seconds - 3:    # Play three tones at the end
-            play_audio(ASSETS_PATH / "A5.mp3")
+    def __init__(self, audio_files, delay, repeat, audio_only, reading_delay, confirm_before, no_start, no_end, no_tone, no_read):
+        self.audio_files = audio_files
+        self.delay = delay
+        self.repeat = repeat
+        self.audio_only = audio_only
+        self.reading_delay = reading_delay
+        self.confirm_before = confirm_before
+        self.no_start = no_start
+        self.no_end = no_end
+        self.no_tone = no_tone
+        self.no_read = no_read
+
+    def run(self):
+        if not self.no_start and not self.audio_only:
+            horizontal_bar()
+            self.start()
+        self.play_files()
+        if not self.no_end and not self.audio_only:
+            horizontal_bar()
+            self.end()
+
+    def start(self):
+        self.notify("Announcing the start of the Listening Section.", notify_str="Announcement", fg="blue")
+        self.play(ASSETS_PATH / "now_starting_the_listening_section_of_the_test.m4a")
+        sleep(1)
+
+    def end(self):
+        self.notify("Announcing the end of the Listening Section.", notify_str="Announcement", fg="blue")
+        self.play(ASSETS_PATH / "the_listening_section_is_finished.m4a")
+
+    def play(self, path: Path, really_quiet=True, background=False) -> None:
+        args = ["mpv", "--no-config", str(path)]
+        if really_quiet:
+            args.append("--really-quiet")
+        if background:
+            subprocess.Popen(['mpv', str(path), "--no-terminal", "--no-config"]) # really quiet is necessary
         else:
-            sleep(1)
-    print(" continuing")
+            subprocess.run(args)
 
-def confirm_or_delay(confirm_before, delay):
-    """ Confirm to continue or wait before continuing """
-    if confirm_before:
-        prompt_string = click.style(">>> Press [ENTER] to continue...", bold=True)
-        click.confirm(prompt_string, default=True, show_default=False, prompt_suffix="")
-        return
-    else:
-        wait(delay)
+    def play_with_progress(self, path):
+        duration = get_audio_duration(path)
+        
+        # Start mpv in the background
+        subprocess.Popen(['mpv', str(path), "--no-terminal"]) # really quiet is necessary
+        color = "green"
 
-def play_file(number, audio_file, delay, reading_delay, repeat, confirm_before, no_tone, no_read):
-    """ Go through a process of playing a file for NUMBER times. """
+        l_bracket = click.style("[", fg=color)
+        r_bracket = click.style("]", fg=color)
 
-    play_audio(ASSETS_PATH / f"listening_number_{number}.m4a")
-    play_audio(ASSETS_PATH / f"audio_play_{number}.m4a")
+        label = click.style("[PLAYING]", fg=color)
 
-    if not no_read and reading_delay > 0:
-        play_audio(ASSETS_PATH / "before_we_start_listening_you_can_read_the_questions.m4a")
-        confirm_or_delay(confirm_before, reading_delay)
+        # Create a progress bar
+        with click.progressbar(
+                range(0, duration, 100), 
+                label=label, 
+                show_eta=False, 
+                fill_char=click.style("─", fg=color), 
+                empty_char=click.style("─", fg=238), 
+                color=True, 
+                width=50,
+                bar_template=f'%(label)s {l_bracket}%(bar)s{r_bracket}  %(info)s of {duration / 1000}s'
+                ) as bar:
+            # sleep for every bit
+            for x in bar:
+                #print(dir(bar))
+                sleep(0.1)
 
-    for x in range(repeat):
-        if not no_tone:
-            play_audio(ASSETS_PATH / "E6.mp3")
-        notify(f"Playing {audio_file.name}")
-        play_audio(audio_file, really_quiet=False)
-        confirm_or_delay(confirm_before, delay)
+
+    def notify(self, text: str, notify_str: str="info", fg="green", bold=False) -> None:
+        """ Print out a formatted notification string given certain text """
+        notify_str = click.style(f"[{notify_str.upper()}]", fg=fg, bold=bold)
+        prefix = click.style("", dim=True)
+        click.secho(f"{prefix}{notify_str} {text}")
+
+    def wait(self, seconds: int) -> None:
+        # Create a progress bar
+        color = "yellow"
+        label = click.style("[WAITING]", fg=color)
+        l_bracket = click.style("[", fg=color)
+        r_bracket = click.style("]", fg=color)
+        with click.progressbar(
+                range(0, seconds), 
+                label=label,
+                show_eta=False, 
+                fill_char=click.style("─", fg=color), 
+                empty_char=click.style("─", fg=238), 
+                color=True, 
+                width=50,
+                bar_template=f'%(label)s {l_bracket}%(bar)s{r_bracket}  %(info)s of {seconds}s'
+                ) as bar:
+            # sleep for every bit
+            for x in bar:
+                if x + 1 > seconds - 3 and not self.no_tone and not self.audio_only and not self.confirm_before:
+                    # Play three tones at the end
+                    self.play(ASSETS_PATH / "A5.mp3", background=True)
+                sleep(1)
+
+    def play_files(self):
+        """ Main process to play the audio files """
+        for number, audio_file in enumerate(self.audio_files, start=1):
+            horizontal_bar()
+            self.notify(f"Audio #{number}", notify_str="Starting", fg="magenta")
+            self.play_file(number, audio_file)
+            self.notify(f"Audio #{number}", notify_str="Finished", fg="magenta")
+
+    def play_file(self, number, audio_file):
+        """ Go through a process of playing a file for NUMBERth time. """
+
+        if not self.audio_only:
+            self.notify(f"Listening Number {number}", notify_str="Announcement", fg="blue")
+            self.play(ASSETS_PATH / f"listening_number_{number}.m4a")
+            self.play(ASSETS_PATH / f"audio_play_{number}.m4a")
+
+        if not self.no_read and self.reading_delay > 0 and not self.audio_only:
+            self.notify(f"Pause for reading time", notify_str="Announcement", fg="blue")
+            self.play(ASSETS_PATH / "before_we_start_listening_you_can_read_the_questions.m4a")
+            self.wait(self.reading_delay)
+
+        repeat_str = click.style(f"[Repeat: {self.repeat}x]", fg="green") 
+        if self.repeat == 0:
+            repeat_str = click.style("[No Repeat]", fg=246)
+
+        delay_str = click.style(f"[Post-Delay: {self.delay}s]", fg="yellow") 
+        if self.audio_only:
+            delay_str = click.style("[No Post-delay]", fg=246)
+
+        self.notify(f"{audio_file.name}  {repeat_str}  {delay_str}", notify_str="PLAY", fg="green")
+        for x in range(self.repeat + 1): # adding one to properly do the repeat
+            if self.confirm_before:
+                prompt_string = click.style("> Press [ENTER] to continue...", bold=True)
+                click.confirm(prompt_string, default=True, show_default=False, prompt_suffix="")
+
+            elif not self.no_tone and not self.audio_only:
+                self.play(ASSETS_PATH / "E6.mp3")
+
+            self.play_with_progress(audio_file)
+
+            if not self.confirm_before:
+                self.wait(self.delay)
+
+def do_splash_start(audio_files):
+    # Confirm the order and confirm whether or not to continue
+    click.clear()
+    click.secho(SPLASH)
+    horizontal_bar()
+    click.secho(f"The following {len(audio_files)} file(s) will play in this order:")
+
+    for n, audio_file in enumerate(audio_files, start=1):
+        click.secho(f"  {n:02}. {audio_file.name}")
+
+    prompt_string = click.style("Are you ready to start?", bold=True)
+    if not click.confirm(prompt_string, default=True, show_default=False, prompt_suffix=""):
+        quit()
+
+def get_path(ctx, param, value):
+    if not value:
+        return Path(".").absolute()
+    return Path(value).expanduser().absolute()
 
 
-@click.command()
-@click.option("-p", "--path", type=click.Path(exists=True), help="Specify a path", required=False)
-@click.option("-d", "--delay", default=10, help="Specify delay between plays", required=False)
-@click.option("-r", "--repeat", default=2, help="Specify the number of times to repeat each audio file.", required=False)
+
+@click.command(context_settings={"show_default":True})
+@click.option("-p", "--path", type=click.Path(exists=True), callback=get_path, help="Specify a path to search for files.", required=False)
+@click.option("-d", "--delay", default=10, help="Specify post-delay after an audio file plays. Doing a delay less than 5 will impact tones.", required=False)
+@click.option("-r", "--repeat", default=1, help="Specify the number of times to repeat each audio file. Use 0 for no repeating.", required=False)
+@click.option("-a", "--audio-only", is_flag=True, default=False, help="Audio only. Disables all announcements and tones.", required=False)
 @click.option("--reading-delay", default=15, help="Specify time given to read questions.", required=False)
 @click.option("-c", "--confirm-before", is_flag=True, default=False, help="Confirm before playing an audio file.", required=False)
-@click.option("-e", "--exclude", multiple=True, type=click.Path(), help="Exclude file (can provide multiple)", required=False)
-@click.option("--no-start", is_flag=True, default=False, help="Don't play the start instruction.", required=False)
-@click.option("--no-end", is_flag=True, default=False, help="Don't play the end instruction.", required=False)
-@click.option("--no-tone", is_flag=True, default=False, help="Don't play the tone before an audio file.", required=False)
-@click.option("--no-read", is_flag=True, default=False, help="Don't give read time.", required=False)
-@click.option("--ext", default="mp3", help="The audio file extension to use.", required=False)
-def cli(path, delay, repeat, reading_delay, confirm_before, exclude, no_start, no_end, no_tone, no_read, ext):
+@click.option("-x", "--exclude", multiple=True, type=click.Path(), help="Exclude file (can provide multiple).", required=False)
+@click.option("--no-start", is_flag=True, default=False, help="Disables the starting instruction.", required=False)
+@click.option("--no-end", is_flag=True, default=False, help="Disables the ending instruction.", required=False)
+@click.option("--no-tone", is_flag=True, default=False, help="Disables the tones.", required=False)
+@click.option("--no-read", is_flag=True, default=False, help="Disables the read time.", required=False)
+@click.option("--ext", default="mp3", help="The audio file extension to use", required=False)
+def cli(path, delay, repeat, audio_only, reading_delay, confirm_before, exclude, no_start, no_end, no_tone, no_read, ext):
     """
     fut-listen
 
-    This command line utility is designed to play the conversation files
-    in the current working directory or one specified by --path.
+    This command line utility is designed to play the audio files in the current working directory or one specified by --path.
 
-    Any audio files (.mp3) will be sorted by name. The default behavior is:
+    Any audio files (.mp3 by default) will be sorted by name. The default behavior is:
 
+    \b
     1. Play start instruction
-
-    2. Play each audio file 2 times
-
+    2. For each audio file:
+        1. Play announcements about the Listening Number
+        2. Play announcement about reading questions before listening (15s)
+           ( warning tones are played )
+        3. Play the audio file
+        4. Delay for 10s
+           ( warning tones are played )
+        ( Repeat 3 + 4 )
     3. Play end instruction
 
-    Between sections there will be a default pause of 10 seconds. Warning tones are generated
-    and played 3 seconds before.
     """
 
     # Check that mpv and sox are installed
@@ -110,53 +236,42 @@ def cli(path, delay, repeat, reading_delay, confirm_before, exclude, no_start, n
         click.secho("mpv was not found. Install mpv.", fg="red")
         quit()
 
-    # Check that the delay is at least something!
-    if delay < 5:
-        raise ValueError("You should use a delay longer than 5 seconds.")
+    # Make a list of paths to exclude
+    excluded_paths = [Path(excluded_path).absolute() for excluded_path in exclude]
 
-    # Set the path to current directory if not supplied
-    if path:
-        path = Path(path).expanduser().absolute()
-    if not path:
-        path = Path(".").absolute()
+    # Glob for files and sort them
+    globbed_files = path.glob(f"*.{ext}")
+    audio_files = sorted([file.absolute() for file in globbed_files if file.absolute() not in excluded_paths])
 
-    # Glob for .mp3 files and sort them
-    audio_files = sorted([file for file in path.glob(f"*.{ext}")])
+    # Quit if one of the audio files doesn't exist
+    for audio_file in audio_files:
+        if not audio_file.exists():
+            print(f"{audio_file.name()} does not exist. Quitting.")
+            quit()
 
+    # Quit if there are no audio files
     if len(audio_files) == 0:
         click.secho(f"No .{ext} files found.")
         quit()
 
-    # Confirm the order and confirm whether or not to continue
-    click.clear()
-    splash = SPLASH.replace("`", click.style("`", fg="blue", bold=True))
-    splash = splash.replace("/", click.style("/", fg="blue"))
-    click.secho(splash)
-    click.secho(f"The following {len(audio_files)} file(s) will play in this order:")
-    click.secho("-"*50, dim=True)
+    # Do the splash start and confirm before continuing
+    do_splash_start(audio_files)
 
-    for n, audio_file in enumerate(audio_files, start=1):
-        click.secho(f"  {n:02}. {audio_file.name}")
+    # Initialize and start the audio player
+    audio_player = AudioPlayer(
+            audio_files, 
+            delay, 
+            repeat, 
+            audio_only, 
+            reading_delay, 
+            confirm_before, 
+            no_start, 
+            no_end, 
+            no_tone, 
+            no_read, 
+            )
 
-    click.secho("-"*50, dim=True)
-    prompt_string = click.style("Are you ready to start?", bold=True)
-    if not click.confirm(prompt_string, default=True, show_default=False, prompt_suffix=""):
-        quit()
-
-    # Start section
-    if not no_start:
-        play_audio(ASSETS_PATH / "now_starting_the_listening_section_of_the_test.m4a")
-        sleep(1)
-
-    # Play audio files
-    for number, audio_file in enumerate(audio_files, start=1):
-        click.secho("="*60, dim=True)
-        notify(f"Starting #{number}: {audio_file.name}")
-        play_file(number, audio_file, delay, reading_delay, repeat, confirm_before, no_tone, no_read)
-
-    # End section
-    if not no_end:
-        play_audio(ASSETS_PATH / "the_listening_section_is_finished.m4a")
+    audio_player.run()
 
 
 if __name__ == "__main__":
